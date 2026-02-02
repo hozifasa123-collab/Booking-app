@@ -60,21 +60,44 @@ export async function GET() {
 
         const userId = (session?.user as any)?.id;
 
-        // 1. الحالة الافتراضية: هات الخدمات اللي مش ممسوحة ناعماً بس
-        let query: any = { isDeleted: false };
-
-        // 2. لو المستخدم مسجل، زود شرط استبعاد خدماته
+        // 1. بناء شرط الفلترة
+        let matchQuery: any = { isDeleted: false };
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
-            query = {
-                isDeleted: false,
-                ownerId: { $ne: new mongoose.Types.ObjectId(userId) }
-            };
+            matchQuery.ownerId = { $ne: new mongoose.Types.ObjectId(userId) };
         }
 
-        // جلب الخدمات مع إمكانية عمل Populate لبيانات صاحب الخدمة إذا كنت ستحتاج لعرض اسمه
-        const services = await Service.find(query)
-            .populate("ownerId", "name")
-            .sort({ createdAt: -1 });
+        // 2. استخدام Aggregate لجلب الخدمات مع حساب التقييمات
+        const services = await Service.aggregate([
+    { $match: matchQuery },
+    // 1. ربط جدول المراجعات (اللي عملناه قبل كده)
+    {
+        $lookup: {
+            from: "reviews",
+            localField: "_id",
+            foreignField: "serviceId",
+            as: "reviewsData"
+        }
+    },
+    // 2. الربط الجديد: جلب بيانات صاحب الخدمة من جدول الـ users
+    {
+        $lookup: {
+            from: "users", 
+            localField: "ownerId",
+            foreignField: "_id",
+            as: "ownerDetails"
+        }
+    },
+    {
+        $addFields: {
+            averageRating: { $ifNull: [{ $avg: "$reviewsData.rating" }, 0] },
+            totalReviews: { $size: "$reviewsData" },
+            // تحويل مصفوفة ownerDetails إلى Object واحد داخل ownerId
+            ownerId: { $arrayElemAt: ["$ownerDetails", 0] } 
+        }
+    },
+    { $project: { reviewsData: 0, ownerDetails: 0 } }, // تنظيف البيانات الزائدة
+    { $sort: { createdAt: -1 } }
+]);
 
         return NextResponse.json(services);
     } catch (error) {

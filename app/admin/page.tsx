@@ -1,0 +1,309 @@
+"use client";
+import { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+    Users,
+    Briefcase,
+    Star,
+    ShieldAlert,
+    UserX,
+    CheckCircle,
+    MessageSquare,
+    Database,
+    AlertCircle,
+    RefreshCw,
+    LogOut
+} from "lucide-react";
+import { toast } from "react-hot-toast";
+import { signOut } from "next-auth/react";
+import Link from "next/link";
+
+export default function AdminDashboard() {
+    const [data, setData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    // Modal States
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<any>(null);
+    const [actionType, setActionType] = useState(""); // "warn" or "suspend"
+    const [reason, setReason] = useState("");
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch("/api/admin/all-data");
+            const d = await res.json();
+
+            // Filter out Admins to focus on monitoring users only
+            if (d.users) {
+                d.users = d.users.filter((u: any) => u.role !== "admin");
+            }
+
+            setData(d);
+            setLoading(false);
+        } catch (error: any) {
+            toast.error("SYSTEM ERROR: Failed to sync with database");
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const handleUserAction = async () => {
+        if (!reason && actionType !== "activate") {
+            return toast.error("System requires a reason for this action");
+        }
+        try {
+            const res = await fetch("/api/admin/actions", {
+                method: "PATCH",
+                body: JSON.stringify({ userId: selectedUser._id, action: actionType, reason }),
+            });
+            if (res.ok) {
+                toast.success(`Protocol ${actionType} executed successfully`);
+                setIsModalOpen(false);
+                setReason("");
+                fetchData();
+            }
+        } catch (error) {
+            toast.error("Execution failed: API unreachable");
+        }
+    };
+
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f172a] text-blue-400 font-mono">
+            <Database className="animate-spin mb-4" size={40} />
+            <p className="tracking-[0.2em] animate-pulse">LOADING_SYSTEM_DATA_...</p>
+        </div>
+    );
+
+    return (
+        <div className="p-6 space-y-8 bg-[#0f172a] min-h-screen font-mono text-slate-300">
+            {/* Header Area */}
+            <div className="flex justify-between items-center border-b border-slate-800 pb-6">
+                <div>
+                    <h1 className="text-2xl font-black text-white tracking-tighter flex items-center gap-3">
+                        <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
+                        MASTER CONTROL PANEL
+                    </h1>
+                    <p className="text-[10px] text-slate-500 mt-1 uppercase">Centralized Database Oversight & Content Moderation</p>
+                </div>
+                <div className="flex gap-3">
+                    <button onClick={fetchData} className="flex items-center gap-2 text-[10px] bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded border border-slate-700 text-white transition">
+                        <RefreshCw size={12} /> RE-SYNC
+                    </button>
+                    <Link href='/dashboard'>
+                        <button className="flex items-center gap-2 text-[10px] bg-green-800 hover:bg-green-700 px-4 py-2 rounded border border-green-700 text-white transition">
+                        <RefreshCw size={12} /> Convert to user
+                        </button>
+                    </Link>
+                    <button onClick={() => signOut({ callbackUrl: '/' })} className="flex items-center gap-2 text-[10px] bg-red-900/20 hover:bg-red-900/40 px-4 py-2 rounded border border-red-900/50 text-red-500 transition">
+                        <LogOut size={12} /> TERMINATE_SESSION
+                    </button>
+                </div>
+            </div>
+
+            {/* Top Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard title="Total Registered Users" count={data.stats.totalUsers} icon={<Users />} color="blue" />
+                <StatCard title="Total Published Services" count={data.stats.totalServices} icon={<Briefcase />} color="green" />
+                <StatCard title="Total User Reviews" count={data.stats.totalReviews} icon={<Star />} color="yellow" />
+            </div>
+
+            <Tabs defaultValue="users" className="w-full">
+                <TabsList className="bg-slate-900 border border-slate-800 p-1 mb-6">
+                    <TabsTrigger value="users" className="data-[state=active]:bg-blue-600">USERS_REGISTRY</TabsTrigger>
+                    <TabsTrigger value="services" className="data-[state=active]:bg-green-600">SERVICES_LOG</TabsTrigger>
+                    <TabsTrigger value="reviews" className="data-[state=active]:bg-yellow-600 text-yellow-500 data-[state=active]:text-white">REVIEWS_MODERATION</TabsTrigger>
+                </TabsList>
+
+                {/* 1. USERS TAB */}
+                <TabsContent value="users">
+                    <Card className="bg-slate-900 border-slate-800">
+                        <CardHeader><CardTitle className="text-white text-sm">USER_DATABASE_TRACE</CardTitle></CardHeader>
+                        <CardContent className="p-0 overflow-auto">
+                            <table className="w-full text-left text-[11px]">
+                                <thead className="bg-black text-slate-500 uppercase">
+                                    <tr>
+                                        <th className="p-4 border-b border-slate-800">Identity & Credentials</th>
+                                        <th className="p-4 border-b border-slate-800">Phone/Contact</th>
+                                        <th className="p-4 border-b border-slate-800 text-center">Status/Risk</th>
+                                        <th className="p-4 border-b border-slate-800 text-right">Execution</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    {data.users.map((user: any) => (
+                                        <tr key={user._id} className="hover:bg-slate-800/40 transition">
+                                            <td className="p-4">
+                                                <div className="text-white font-bold uppercase">{user.name}</div>
+                                                <div className="text-slate-500 italic lowercase font-sans">{user.email}</div>
+                                                <div className="text-[9px] text-blue-500 mt-1">UUID: {user._id}</div>
+                                            </td>
+                                            <td className="p-4 font-mono text-green-500">{user.phone || "UNLINKED"}</td>
+                                            <td className="p-4 text-center">
+                                                <div className="flex flex-col gap-1 items-center">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${user.status === 'active' ? 'bg-green-900/30 text-green-500' : 'bg-red-900/30 text-red-500'}`}>
+                                                        {user.status.toUpperCase()}
+                                                    </span>
+                                                    <span className="text-red-400 text-[9px]">WARNS: {user.warnings || 0}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <button onClick={() => { setSelectedUser(user); setActionType("warn"); setIsModalOpen(true); }} className="p-2 text-yellow-500 border border-yellow-900/50 rounded hover:bg-yellow-900/20"><ShieldAlert size={14} /></button>
+                                                    {user.status === "active" ? (
+                                                        <button onClick={() => { setSelectedUser(user); setActionType("suspend"); setIsModalOpen(true); }} className="p-2 text-red-500 border border-red-900/50 rounded hover:bg-red-900/20"><UserX size={14} /></button>
+                                                    ) : (
+                                                        <button onClick={() => { setSelectedUser(user); setActionType("activate"); handleUserAction(); }} className="p-2 text-green-500 border border-green-900/50 rounded hover:bg-green-900/20"><CheckCircle size={14} /></button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* 2. SERVICES TAB */}
+                <TabsContent value="services">
+                    <Card className="bg-slate-900 border-slate-800">
+                        <CardHeader><CardTitle className="text-white text-sm uppercase italic">Live_Service_Monitoring</CardTitle></CardHeader>
+                        <CardContent className="p-0 overflow-auto">
+                            <table className="w-full text-left text-[11px]">
+                                <thead className="bg-black text-slate-500 uppercase">
+                                    <tr>
+                                        <th className="p-4 border-b border-slate-800">Service Metadata</th>
+                                        <th className="p-4 border-b border-slate-800">Owner Identity (Provider)</th>
+                                        <th className="p-4 border-b border-slate-800">Price Point</th>
+                                        <th className="p-4 border-b border-slate-800">Security</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.services.map((srv: any) => (
+                                        <tr key={srv._id} className="hover:bg-slate-800/40 border-b border-slate-800/30">
+                                            <td className="p-4">
+                                                <div className="text-white font-bold truncate max-w-[150px] uppercase">{srv.title}</div>
+                                                <div className="text-[9px] text-slate-500 truncate max-w-[200px]">{srv.description}</div>
+                                                <div className="text-[9px] text-blue-500 mt-1 italic underline">ID: {srv._id}</div>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="text-white font-bold italic">{srv.ownerId?.name}</div>
+                                                <div className="text-slate-500 font-sans">{srv.ownerId?.email}</div>
+                                                <div className="text-[9px] text-blue-400 uppercase font-bold mt-1">UID: {srv.ownerId?._id}</div>
+                                            </td>
+                                            <td className="p-4 font-black text-green-500 text-xs">${srv.price}</td>
+                                            <td className="p-4">
+                                                <div className="flex flex-col gap-1">
+                                                    <button onClick={() => { setSelectedUser(srv.ownerId); setActionType("warn"); setIsModalOpen(true); }} className="text-yellow-600 hover:underline text-left">FLAG_OWNER</button>
+                                                    <button onClick={() => { setSelectedUser(srv.ownerId); setActionType("suspend"); setIsModalOpen(true); }} className="text-red-600 hover:underline text-left">SUSPEND_OWNER</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* 3. REVIEWS TAB (CONTENT MODERATION) */}
+                <TabsContent value="reviews">
+                    <Card className="bg-slate-900 border-slate-800">
+                        <CardHeader className="border-b border-slate-800">
+                            <CardTitle className="text-sm flex items-center gap-2 text-yellow-500 italic uppercase">
+                                <MessageSquare size={16} /> Content Inspection / Spam Control
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0 overflow-auto max-h-[600px]">
+                            <table className="w-full text-left text-[11px]">
+                                <thead className="bg-black text-slate-500">
+                                    <tr>
+                                        <th className="p-4 border-b border-slate-800">RATING</th>
+                                        <th className="p-4 border-b border-slate-800">USER_COMMENT</th>
+                                        <th className="p-4 border-b border-slate-800">REVIEW_AUTHOR</th>
+                                        <th className="p-4 border-b border-slate-800">TARGET_SERVICE</th>
+                                        <th className="p-4 border-b border-slate-800 text-right">ACTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    {data.reviews.map((rev: any) => (
+                                        <tr key={rev._id} className="hover:bg-red-900/10 transition">
+                                            <td className="p-4 text-center">
+                                                <div className="bg-slate-800 p-2 rounded text-yellow-500 font-bold text-xs">{rev.rating} ★</div>
+                                            </td>
+                                            <td className="p-4 max-w-[200px]">
+                                                <p className="text-slate-200 bg-black/50 p-2 rounded italic font-sans leading-relaxed">"{rev.comment}"</p>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="text-white font-bold italic">{rev.clientId?.name}</div>
+                                                <div className="text-[9px] text-slate-500">ID: {rev.clientId?._id}</div>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="text-green-500 font-bold underline">{rev.serviceId?.name}</div>
+                                                <div className="text-[9px] text-slate-500 italic">Owner: {rev.serviceId?.ownerId?.name || "N/A"}</div>
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                <button onClick={() => { setSelectedUser(rev.clientId); setActionType("warn"); setIsModalOpen(true); }} className="text-red-500 bg-red-900/10 px-2 py-1 rounded border border-red-900/30 hover:bg-red-900/30 transition text-[9px] font-black uppercase">Warn_Author</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+
+            {/* ACTION MODAL (THE SYSTEM TERMINAL) */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+                    <div className="bg-[#1e293b] border-t-2 border-red-600 p-8 w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                        <div className="flex items-center gap-3 mb-4 text-red-500">
+                            <AlertCircle size={24} />
+                            <h2 className="text-xl font-black italic uppercase tracking-tighter">System_Protocol_{actionType.toUpperCase()}</h2>
+                        </div>
+                        <div className="bg-black/40 p-3 border border-slate-700 mb-6 font-mono text-[10px]">
+                            <p className="text-slate-400">TARGET_ENTITY_NAME: <span className="text-white">{selectedUser?.name}</span></p>
+                            <p className="text-slate-400">TARGET_ENTITY_EMAIL: <span className="text-yellow-400">{selectedUser?.email}</span></p>
+                            <p className="text-slate-400">TARGET_ENTITY_ID: <span className="text-blue-400">{selectedUser?._id}</span></p>
+                        </div>
+                        <textarea
+                            className="w-full bg-black border border-slate-700 p-4 text-white font-mono text-xs h-40 outline-none focus:border-red-600 transition-colors"
+                            placeholder="REASON_FOR_MODERATION_ACTION..."
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-6 mt-8">
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-white font-bold text-[10px] uppercase tracking-[0.2em]">Abort_Command</button>
+                            <button onClick={handleUserAction} className="bg-red-600 text-white px-10 py-3 font-black text-[10px] uppercase hover:bg-red-700 transition tracking-[0.2em]">Execute_Action</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Stats Card Component
+function StatCard({ title, count, icon, color }: any) {
+    const colorMap: any = {
+        blue: "border-t-blue-500 text-blue-500",
+        green: "border-t-green-500 text-green-500",
+        yellow: "border-t-yellow-500 text-yellow-500",
+    };
+    return (
+        <Card className={`bg-slate-900 border-slate-800 rounded-none border-t-2 ${colorMap[color]}`}>
+            <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">{title}</p>
+                    <p className="text-3xl font-black text-white mt-1 italic">{count}</p>
+                </div>
+                <div className="opacity-20">{icon}</div>
+            </CardContent>
+        </Card>
+    );
+}

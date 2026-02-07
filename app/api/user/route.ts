@@ -112,10 +112,11 @@ export async function DELETE(req: NextRequest) {
       if (hasBookings) {
         // الخدمة اللي عندها حجوزات: نكتفي بإخفائها (Soft Delete)
         await Service.findByIdAndUpdate(service._id, { isDeleted: true });
-
+        
+        const now = new Date();
         // إلغاء الحجوزات المستقبلية المرتبطة بها
         await Booking.updateMany(
-          { serviceId: service._id, status: "confirmed" },
+          { serviceId: service._id, status: "confirmed", startTime: { $gt: now } },
           { $set: { status: "cancelled", statusAdminDelete: "yes" } }
         );
       } else {

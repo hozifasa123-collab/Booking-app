@@ -19,8 +19,23 @@ export const authOptions: NextAuthOptions = {
                     const passwordsMatch = await bcrypt.compare(password, user.password);
                     if (!passwordsMatch) return null;
 
-                    return user;
-                } catch (error) {
+                    if (user.status === "suspended") {
+                        throw new Error("suspended");
+                    }
+
+                    // نرجع الكائن ونضيف الـ id يدوياً لضمان التعرف عليه
+                    return {
+                        id: user._id.toString(),
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        status: user.status,
+                        warnings: user.warnings,
+                    };
+                } catch (error: any) {
+                    if (error.message === "suspended") {
+                        throw new Error("suspended");
+                    }
                     console.log("Error: ", error);
                     return null;
                 }
@@ -31,28 +46,35 @@ export const authOptions: NextAuthOptions = {
     pages: { signIn: "/login" },
     callbacks: {
         async jwt({ token, user, trigger, session }) {
-            // 1. Handle the initial login
             if (user) {
-                token.id = user.id;
+                token.id = (user as any).id;
                 token.name = user.name;
                 token.email = user.email;
+                token.role = (user as any).role;
+                token.status = (user as any).status;
+                token.warnings = (user as any).warnings;
             }
 
-            // 2. Handle the "update" trigger from the client side
             if (trigger === "update" && session?.user) {
-                // This updates the token with the new data sent from the settings page
                 token.name = session.user.name;
                 token.email = session.user.email;
+                // تحديث البيانات الإضافية لو تم تمريرها في الـ update
+                if (session.user.role) token.role = session.user.role;
+                if (session.user.status) token.status = session.user.status;
             }
 
             return token;
         },
         async session({ session, token }) {
+            // حل مشكلة "possibly undefined" و "Property id does not exist"
             if (session.user) {
-                (session.user as any).id = token.id as string;
-                // Ensure the session user object reflects the current token data
-                session.user.name = token.name;
-                session.user.email = token.email;
+                const userSession = session.user as any;
+                userSession.id = token.id;
+                userSession.name = token.name;
+                userSession.email = token.email;
+                userSession.role = token.role;
+                userSession.status = token.status;
+                userSession.warnings = token.warnings;
             }
             return session;
         },

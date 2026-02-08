@@ -175,6 +175,34 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {(session?.user as any)?.role !== 'admin' && (<Card className="border-yellow-600/50 bg-yellow-950/100 backdrop-blur-sm">
+        <CardHeader className="p-4 md:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-yellow-500">
+              {/* أيقونة مع تأثير نبض بسيط لجذب الانتباه */}
+              <div className="relative">
+                <AlertTriangle className="h-5 w-5 md:h-6 md:w-6" />
+                <span className="absolute inset-0 animate-ping inline-flex h-full w-full rounded-full bg-yellow-500 opacity-20"></span>
+              </div>
+
+              <div>
+                <CardTitle className="text-sm md:text-base font-black tracking-tighter uppercase italic">
+                  System_Warnings_Detected
+                </CardTitle>
+              </div>
+            </div>
+
+            {/* رقم التحذيرات بشكل بارز */}
+            <div className="flex flex-col items-end">
+              <span className="text-2xl md:text-3xl font-black text-yellow-500 font-mono">
+                {String((session?.user as any)?.warnings || 0).padStart(2, '0')}
+              </span>
+              <span className="text-[8px] text-yellow-600 font-bold uppercase">Points</span>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>)}
+
       {/* قسم منطقة الخطر - حذف الحساب */}
       <Card className="border-red-200 bg-red-50/30">
         <CardHeader>
@@ -188,13 +216,13 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-zinc-600 mb-4">
-            This will permanently delete your profile, your services, and all your existing bookings (both incoming and outgoing). 
+            This will permanently delete your profile, your services, and all your existing bookings (both incoming and outgoing).
             Please make sure you have no pending obligations.
           </p>
         </CardContent>
         <CardFooter className="bg-red-200 border-t border-red-100 py-4">
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             onClick={handleDeleteAccount}
             disabled={deleteLoading}
             className="flex gap-2 bg-red-500 cursor-pointer hover:bg-red-400"

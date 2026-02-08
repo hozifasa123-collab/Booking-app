@@ -119,14 +119,14 @@ export default function Sidebar() {
               <span>Sign out</span>
             </DropdownMenuItem>
             {(user as any)?.role === 'admin' &&
-            (<Link href='/admin'>
-            <DropdownMenuItem
-              className="flex items-center p-2 cursor-pointer text-green-400 focus:bg-green-500/10 focus:text-green-400 rounded-md mt-1"
-            >
-              <RefreshCw className="h-4 w-4 mr-3" />
-              <span>Convert to admin</span>
-            </DropdownMenuItem>
-           </Link>)} 
+              (<Link href='/admin'>
+                <DropdownMenuItem
+                  className="flex items-center p-2 cursor-pointer text-green-400 focus:bg-green-500/10 focus:text-green-400 rounded-md mt-1"
+                >
+                  <RefreshCw className="h-4 w-4 mr-3" />
+                  <span>ADMIN_VIEW</span>
+                </DropdownMenuItem>
+              </Link>)}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -85,22 +85,35 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center border-b border-slate-800 pb-6">
                 <div>
                     <h1 className="text-2xl font-black text-white tracking-tighter flex items-center gap-3">
-                        <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
                         MASTER CONTROL PANEL
                     </h1>
                     <p className="text-[10px] text-slate-500 mt-1 uppercase">Centralized Database Oversight & Content Moderation</p>
                 </div>
-                <div className="flex gap-3">
-                    <button onClick={fetchData} className="flex items-center gap-2 text-[10px] bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded border border-slate-700 text-white transition">
-                        <RefreshCw size={12} /> RE-SYNC
+                <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto pl-10">
+                    {/* زر التحديث - يظهر بشكل كامل في كل الشاشات لأن الأيقونة وحدها قد لا تكون مفهومة */}
+                    <button
+                        onClick={fetchData}
+                        className="flex items-center justify-center gap-2 text-[10px] bg-slate-800 hover:bg-slate-700 px-4 py-3 md:py-2 rounded border border-slate-700 text-white transition active:scale-95 w-full md:w-auto font-bold"
+                    >
+                        <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                        RE-SYNC
                     </button>
-                    <Link href='/dashboard'>
-                        <button className="flex items-center gap-2 text-[10px] bg-green-800 hover:bg-green-700 px-4 py-2 rounded border border-green-700 text-white transition">
-                        <RefreshCw size={12} /> Convert to user
+
+                    {/* زر العودة للمستخدم - قمت بتغيير الأيقونة لـ Users لتكون أنسب */}
+                    <Link href='/dashboard' className="w-full md:w-auto">
+                        <button className="flex items-center justify-center gap-2 text-[10px] bg-green-900/20 hover:bg-green-800/40 px-4 py-3 md:py-2 rounded border border-green-700/50 text-green-500 transition active:scale-95 w-full font-bold">
+                            <Users size={14} />
+                            USER_VIEW
                         </button>
                     </Link>
-                    <button onClick={() => signOut({ callbackUrl: '/' })} className="flex items-center gap-2 text-[10px] bg-red-900/20 hover:bg-red-900/40 px-4 py-2 rounded border border-red-900/50 text-red-500 transition">
-                        <LogOut size={12} /> TERMINATE_SESSION
+
+                    {/* زر تسجيل الخروج */}
+                    <button
+                        onClick={() => signOut({ callbackUrl: '/' })}
+                        className="flex items-center justify-center gap-2 text-[10px] bg-red-900/20 hover:bg-red-900/40 px-4 py-3 md:py-2 rounded border border-red-900/50 text-red-500 transition active:scale-95 w-full md:w-auto font-bold"
+                    >
+                        <LogOut size={14} />
+                        TERMINATE
                     </button>
                 </div>
             </div>
@@ -114,9 +127,9 @@ export default function AdminDashboard() {
 
             <Tabs defaultValue="users" className="w-full">
                 <TabsList className="bg-slate-900 border border-slate-800 p-1 mb-6">
-                    <TabsTrigger value="users" className="data-[state=active]:bg-blue-600">USERS_REGISTRY</TabsTrigger>
-                    <TabsTrigger value="services" className="data-[state=active]:bg-green-600">SERVICES_LOG</TabsTrigger>
-                    <TabsTrigger value="reviews" className="data-[state=active]:bg-yellow-600 text-yellow-500 data-[state=active]:text-white">REVIEWS_MODERATION</TabsTrigger>
+                    <TabsTrigger value="users" className="data-[state=active]:bg-blue-600">USERS</TabsTrigger>
+                    <TabsTrigger value="services" className="data-[state=active]:bg-green-600">SERVICES</TabsTrigger>
+                    <TabsTrigger value="reviews" className="data-[state=active]:bg-yellow-600 text-yellow-500 data-[state=active]:text-white">REVIEWS</TabsTrigger>
                 </TabsList>
 
                 {/* 1. USERS TAB */}
@@ -261,25 +274,25 @@ export default function AdminDashboard() {
             {/* ACTION MODAL (THE SYSTEM TERMINAL) */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
-                    <div className="bg-[#1e293b] border-t-2 border-red-600 p-8 w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                    <div className="bg-[#1e293b] border-t-2 border-red-600 p-6 md:p-8 w-full max-w-lg shadow-2xl overflow-y-auto max-h-[90vh]">
                         <div className="flex items-center gap-3 mb-4 text-red-500">
                             <AlertCircle size={24} />
-                            <h2 className="text-xl font-black italic uppercase tracking-tighter">System_Protocol_{actionType.toUpperCase()}</h2>
+                            <h2 className="text-lg md:text-xl font-black italic uppercase tracking-tighter">System_Protocol_{actionType.toUpperCase()}</h2>
                         </div>
-                        <div className="bg-black/40 p-3 border border-slate-700 mb-6 font-mono text-[10px]">
-                            <p className="text-slate-400">TARGET_ENTITY_NAME: <span className="text-white">{selectedUser?.name}</span></p>
-                            <p className="text-slate-400">TARGET_ENTITY_EMAIL: <span className="text-yellow-400">{selectedUser?.email}</span></p>
-                            <p className="text-slate-400">TARGET_ENTITY_ID: <span className="text-blue-400">{selectedUser?._id}</span></p>
+                        <div className="bg-black/40 p-3 border border-slate-700 mb-6 font-mono text-[10px] break-all">
+                            <p className="text-slate-400">TARGET: <span className="text-white">{selectedUser?.name}</span></p>
+                            <p className="text-slate-400">EMAIL: <span className="text-white">{selectedUser?.email}</span></p>
+                            <p className="text-slate-400">ID: <span className="text-blue-400">{selectedUser?._id}</span></p>
                         </div>
                         <textarea
-                            className="w-full bg-black border border-slate-700 p-4 text-white font-mono text-xs h-40 outline-none focus:border-red-600 transition-colors"
+                            className="w-full bg-black border border-slate-700 p-4 text-white font-mono text-xs h-32 md:h-40 outline-none focus:border-red-600 transition-colors"
                             placeholder="REASON_FOR_MODERATION_ACTION..."
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
                         />
-                        <div className="flex justify-end gap-6 mt-8">
-                            <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-white font-bold text-[10px] uppercase tracking-[0.2em]">Abort_Command</button>
-                            <button onClick={handleUserAction} className="bg-red-600 text-white px-10 py-3 font-black text-[10px] uppercase hover:bg-red-700 transition tracking-[0.2em]">Execute_Action</button>
+                        <div className="flex flex-col sm:flex-row justify-end gap-4 mt-8">
+                            <button onClick={() => setIsModalOpen(false)} className="order-2 sm:order-1 text-slate-500 hover:text-white font-bold text-[10px] uppercase tracking-widest py-2">Abort_Command</button>
+                            <button onClick={handleUserAction} className="order-1 sm:order-2 bg-red-600 text-white px-8 py-3 font-black text-[10px] uppercase hover:bg-red-700 transition tracking-widest">Execute_Action</button>
                         </div>
                     </div>
                 </div>
